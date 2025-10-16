@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Pelari Cepat Rintangan: Kecepatan Kilat ⚡ - Stabil</title>
+    <style>
+        /* Gaya CSS */
+        body { margin: 0; overflow: hidden; background-color: #f0f0f0; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: 'Arial', sans-serif; }
+        #gameCanvas { 
+            border: 5px solid #333; 
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+            background: linear-gradient(to top, #92d2f7, #6fbceb);
+        }
+        #scoreDisplay { position: absolute; top: 20px; right: 20px; font-size: 28px; font-weight: bold; color: #333; text-shadow: 1px 1px 0 white; }
+        #gameOverScreen {
+            display: none; 
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 50px;
+            text-align: center;
+            border-radius: 15px;
+            z-index: 100;
+            box-shadow: 0 0 30px rgba(255, 0, 0, 0.7);
+        }
+        #gameOverScreen h1 { color: #ff5555; }
+        #gameOverScreen button { 
+            padding: 10px 20px; 
+            font-size: 20px; 
+            cursor: pointer; 
+            margin-top: 20px; 
+            border: none;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        #gameOverScreen button:hover { background-color: #45a049; }
+    </style>
+</head>
+<body>
+
+    <canvas id="gameCanvas" width="800" height="400"></canvas>
+    <div id="scoreDisplay">Skor: 0</div>
+    <div id="gameOverScreen">
+        <h1>GAME OVER!</h1>
+        <p id="finalScore" style="font-size: 22px;"></p>
+        <button onclick="startGame()">Main Lagi</button>
+    </div>
+
+    <script>
+        // --- Setup Canvas dan Konteks ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const finalScoreText = document.getElementById('finalScore');
+
+        // --- Variabel Global ---
+        let gameRunning = false;
+        let score = 0;
+        let obstacles = [];
+        let lastTime = 0;
+        let frameCount = 0; 
+        
+        // --- Variabel Karakter ---
+        const player = {
+            x: 50,
+            y: 0,
+            width: 30,
+            height: 50, // Tinggi aktual karakter
+            velocityY: 0,
+            isJumping: false,
+            isCrouching: false,
+            originalHeight: 50,
+            crouchHeight: 25,
+            jumpForce: -15, 
+            groundY: canvas.height - 50,
+            isStable: true // Flag untuk memastikan karakter di tanah
+        };
+        
+        // --- Konstanta Fisika dan Game ---
+        const GRAVITY = 0.8;
+        const RUN_SPEED = 6; // Ditingkatkan sedikit
+        const SPAWN_INTERVAL_BASE = 1200; // Dibuat lebih cepat
+        let spawnTimer = 0;
+
+        // --- FUNGSI MENGGAMBAR KARAKTER KARTUN (Sama) ---
+        function drawPlayer() {
+            const headSize = 15;
+            const bodyColor = '#FFD700'; 
+            const legColor = '#333333';
+            
+            ctx.save();
+            ctx.translate(player.x, player.y);
+
+            // Kepala
+            ctx.fillStyle = bodyColor;
+            ctx.beginPath();
+            ctx.arc(player.width / 2, headSize, headSize, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Badan
+            const bodyHeight = player.height - headSize * 2;
+            ctx.fillRect(5, headSize * 2, player.width - 10, bodyHeight > 0 ? bodyHeight : 0);
+
+            // Kaki
+            ctx.fillStyle = legColor;
+            if (player.isCrouching) {
+                ctx.fillRect(player.width / 2 - 10, player.height - 5, 20, 5); 
+            } else {
+                ctx.fillRect(5, player.height - 10, 10, 10);
+                ctx.fillRect(player.width - 15, player.height - 10, 10, 10);
+            }
+
+            ctx.restore();
+        }
+
+        //
